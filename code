@@ -1,0 +1,268 @@
+// 전역 변수 선언
+let s; // 뱀 객체
+let scl = 20; // 뱀과 음식의 크기
+let foods = []; // 음식 배열
+let foodCount = 5; // 음식 개수
+let playfield = 600; // 게임 화면 크기
+let gameOver = false; // 게임 종료 여부
+let obstacles = []; // 장애물 배열
+
+// 다시 시작 버튼 위치 및 크기
+let restartButtonX = 250;
+let restartButtonY = 300;
+let restartButtonWidth = 100;
+let restartButtonHeight = 50;
+
+// 장애물 생성 주기 (밀리초)
+const obstacleInterval = 5000;
+
+// p5js 설정 함수 - 필수
+function setup() {
+  createCanvas(playfield, 640);
+  background(51);
+  s = new Snake();
+  frameRate(10);
+  for (let i = 0; i < foodCount; i++) {
+    foods.push(newFood());
+  }
+  // 주기적으로 장애물 생성
+  setInterval(createObstacle, obstacleInterval);
+}
+
+// p5js 그리기 함수 - 필수
+function draw() {
+  background(51);
+  if (!gameOver) { // 게임 오버가 아닐 때만 게임 진행
+    scoreboard();
+    for (let obstacle of obstacles) {
+      obstacle.show();
+    }
+    for (let i = foods.length - 1; i >= 0; i--) {
+      foods[i].show();
+      if (s.eat(foods[i])) {
+        foods.splice(i, 1); // 음식을 먹으면 배열에서 제거
+        foods.push(newFood()); // 새로운 음식 추가
+        frameRate(frameRate() + 0.5); // 먹이를 먹을 때마다 속도 증가
+      }
+    }
+    s.death();
+    s.update();
+    s.show();
+  } else {
+    // 게임 오버 시 "Game Over" 표시 및 다시 시작 버튼 생성
+    textAlign(CENTER);
+    textSize(32);
+    fill(255);
+    text("Game Over", width / 2, height / 2 - 40);
+    fill(200);
+    rect(restartButtonX, restartButtonY, restartButtonWidth, restartButtonHeight, 10);
+    fill(255);
+    textSize(20);
+    text("다시 시작", restartButtonX + restartButtonWidth / 2, restartButtonY + restartButtonHeight / 2 + 8);
+  }
+}
+
+// 장애물 생성 함수
+function createObstacle() {
+  obstacles.push(new Obstacle());
+  // 일정 시간이 지난 후 장애물 제거
+  setTimeout(removeObstacle, obstacleInterval);
+}
+
+// 장애물 제거 함수
+function removeObstacle() {
+  obstacles.shift();
+}
+
+// 음식이 나타날 위치 선택
+function newFood() {
+  let cols = floor(playfield / scl);
+  let rows = floor(playfield / scl);
+  let pos;
+  do {
+    pos = createVector(floor(random(cols)), floor(random(rows)));
+    pos.mult(scl);
+  } while (foodCollidesWithSnake(pos) || obstacleCollidesWithObstacle(pos)); // 장애물과 충돌하는지 확인
+  return new Food(pos, color(random(255), random(255), random(255))); // 랜덤 색상의 음식 생성
+}
+
+// 스코어 보드 표시
+function scoreboard() {
+  fill(0);
+  rect(0, 600, 600, 40); // 직사각형 생성 (x좌표, y좌표, 너비, 높이)
+  fill(255);
+  textFont("Georgia");
+  textSize(18);
+  text("점수: ", 20, 625); // "점수:" 텍스트 표시
+  text("최고 점수: ", 450, 625); // "최고 점수:" 텍스트 표시
+  text(s.score, 70, 625); // 현재 점수 표시
+  text(s.highscore, 540, 625); // 최고 점수 표시
+}
+
+// 조작 함수
+function keyPressed() {
+  if (!gameOver) {
+    if (keyCode === UP_ARROW) {
+      s.dir(0, -1);
+    } else if (keyCode === DOWN_ARROW) {
+      s.dir(0, 1);
+    } else if (keyCode === RIGHT_ARROW) {
+      s.dir(1, 0);
+    } else if (keyCode === LEFT_ARROW) {
+      s.dir(-1, 0);
+    }
+  }
+}
+
+// 뱀 객체
+function Snake() {
+  this.x = 0;
+  this.y = 0;
+  this.xspeed = 1;
+  this.yspeed = 0;
+  this.total = 0;
+  this.tail = [];
+  this.score = 1;
+  this.highscore = 1;
+  this.dir = function (x, y) {
+    this.xspeed = x;
+    this.yspeed = y;
+  }
+
+  this.eat = function (pos) {
+    let d = dist(this.x, this.y, pos.pos.x, pos.pos.y); // 음식의 위치에 접근하도록 수정
+    if (d < 1) {
+      this.total++;
+      this.score++;
+      text(this.score, 70, 625);
+      if (this.score > this.highscore) {
+        this.highscore = this.score;
+      }
+      text(this.highscore, 540, 625);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  this.update = function () {
+    if (this.total === this.tail.length) {
+      for (let i = 0; i < this.tail.length - 1; i++) {
+        this.tail[i] = this.tail[i + 1];
+      }
+    }
+    this.tail[this.total - 1] = createVector(this.x, this.y);
+
+    this.x = this.x + this.xspeed * scl;
+    this.y = this.y + this.yspeed * scl;
+
+    this.x = constrain(this.x, 0, playfield - scl);
+    this.y = constrain(this.y, 0, playfield - scl);
+  }
+
+  this.show = function () {
+    // 뱀의 색상을 노란색으로 변경하여 원으로 그림
+    fill(255, 255, 0);
+    for (let i = 0; i < this.tail.length; i++) {
+      ellipse(this.tail[i].x + scl / 2, this.tail[i].y + scl / 2, scl, scl);
+    }
+    ellipse(this.x + scl / 2, this.y + scl / 2, scl, scl);
+  }
+  // 뱀이 장애물과 충돌하는지 확인
+  this.death = function () {
+    // 뱀의 머리와 장애물의 충돌을 확인
+    let head = createVector(this.x, this.y);
+    for (let obstacle of obstacles) {
+      let d = dist(head.x, head.y, obstacle.pos.x, obstacle.pos.y);
+      if (d < scl) {
+        gameOver = true; // 게임 오버 상태로 설정
+        return;
+      }
+    }
+
+    // 뱀의 꼬리와 장애물의 충돌을 확인
+    for (let i = 0; i < this.tail.length; i++) {
+      let pos = this.tail[i];
+      for (let obstacle of obstacles) {
+        let d = dist(pos.x, pos.y, obstacle.pos.x, obstacle.pos.y);
+        if (d < scl) {
+          gameOver = true; // 게임 오버 상태로 설정
+          return;
+        }
+      }
+    }
+    // 뱀의 머리와 꼬리 충돌을 확인
+    for (let i = 0; i < this.tail.length; i++) {
+      let pos = this.tail[i];
+      let d = dist(this.x, this.y, pos.x, pos.y);
+      if (d < 1) {
+        gameOver = true; // 게임 오버 상태로 설정
+        return;
+      }
+    }
+  }
+}
+
+
+// 장애물 객체
+function Obstacle() {
+  this.pos = createVector(random(playfield), random(playfield)); // 장애물 위치
+
+  this.show = function () {
+    fill(255); // 장애물 색상
+    rect(this.pos.x, this.pos.y, scl, scl); // 장애물 표시
+  }
+}
+
+// 음식 객체
+function Food(pos, col) { // 색상(col) 매개변수 추가
+  this.pos = pos;
+  this.col = col; // 음식의 색상
+
+  this.show = function () {
+    fill(this.col); // 랜덤 색상으로 설정
+    ellipse(this.pos.x + scl / 2, this.pos.y + scl / 2, scl, scl); // 음식을 원으로 그림
+  }
+}
+
+// 장애물과 뱀이 충돌하는지 확인하는 함수
+function obstacleCollidesWithObstacle(pos) {
+  for (let obstacle of obstacles) {
+    let d = dist(obstacle.pos.x, obstacle.pos.y, pos.x, pos.y);
+    if (d < 1) {
+      return true; // 충돌 발생
+    }
+  }
+  return false; // 충돌 없음
+}
+
+// 음식과 뱀이 충돌하는지 확인하는 함수
+function foodCollidesWithSnake(pos) {
+  for (let segment of s.tail) {
+    if (segment.x === pos.x && segment.y === pos.y) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 게임 재시작 함수
+function resetGame() {
+  s = new Snake(); // 새로운 뱀 생성
+  frameRate(10); // 프레임 속도 초기화
+  for (let i = 0; i < foodCount; i++) { // 새 음식 위치 지정
+    foods[i] = newFood();
+  }
+  gameOver = false; // 게임 오버 상태 해제
+}
+
+// 마우스 클릭 이벤트
+function mouseClicked() {
+  // 다시 시작 버튼을 클릭했는지 확인
+  if (mouseX > restartButtonX && mouseX < restartButtonX + restartButtonWidth &&
+    mouseY > restartButtonY && mouseY < restartButtonY + restartButtonHeight) {
+    if (gameOver) {
+      resetGame(); // 게임 재시작
+    }
+  }
+} 
