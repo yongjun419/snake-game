@@ -1,3 +1,9 @@
+// p5.js에서 sound 관련 라이브러리를 사용하기 위해서는 먼저 index.html dml 헤더에 <script src="path/to/p5.sound.js"></script>를 추가해야합니다. 
+
+// 그런 다음 소리를 재생하려면 sketch Files에 폴더를 생성하고 거기에 사용하려는 음성파일을 넣으면 됩니다. 
+
+// 저의 경우는 sketch Files에 sound라는 폴더를 생성하고 효과음뿅뿅.mp3 파일을 넣었습니다.
+
 // 전역 변수 선언
 let s; // 뱀 객체
 let scl = 20; // 뱀과 음식의 크기
@@ -6,6 +12,8 @@ let foodCount = 5; // 음식 개수
 let playfield = 600; // 게임 화면 크기
 let gameOver = false; // 게임 종료 여부
 let obstacles = []; // 장애물 배열
+let bg_color = 51; // 초기 배경색
+let eatsound; // 음식 먹으면 소리가 나오게 하는 변수
 
 // 다시 시작 버튼 위치 및 크기
 let restartButtonX = 250;
@@ -16,10 +24,15 @@ let restartButtonHeight = 50;
 // 장애물 생성 주기 (밀리초)
 const obstacleInterval = 5000;
 
+// 파일 미리 가져오는 함수
+function preload() {
+  eatsound = loadSound('sound/효과음뿅뿅.mp3');
+}
+
 // p5js 설정 함수 - 필수
 function setup() {
   createCanvas(playfield, 640);
-  background(51);
+  background(bg_color);
   s = new Snake();
   frameRate(10);
   for (let i = 0; i < foodCount; i++) {
@@ -42,6 +55,7 @@ function draw() {
       if (s.eat(foods[i])) {
         foods.splice(i, 1); // 음식을 먹으면 배열에서 제거
         foods.push(newFood()); // 새로운 음식 추가
+        eatsound.play(); // 먹이를 먹을 때마다 뿅뿅 소리 재생
         frameRate(frameRate() + 0.5); // 먹이를 먹을 때마다 속도 증가
       }
     }
@@ -139,6 +153,11 @@ function Snake() {
         this.highscore = this.score;
       }
       text(this.highscore, 540, 625);
+      
+      // 음식을 먹으면 배경색을 랜덤으로 변경함
+      bg_color = color(random(255), random(255), random(255));
+      background(bg_color); 
+      
       return true;
     } else {
       return false;
