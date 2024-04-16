@@ -1,5 +1,5 @@
 // p5.js에서 sound 관련 라이브러리를 사용하기 위해서는 먼저 index.html dml 헤더에 <script src="path/to/p5.sound.js"></script>를 추가해야합니다. 
-
+// 로그인을 해야 개인file을 넣을수 있습니다.
 // 그런 다음 소리를 재생하려면 sketch Files에 폴더를 생성하고 거기에 사용하려는 음성파일을 넣으면 됩니다. 
 
 // 저의 경우는 sketch Files에 sound라는 폴더를 생성하고 효과음뿅뿅.mp3 파일을 넣었습니다.
